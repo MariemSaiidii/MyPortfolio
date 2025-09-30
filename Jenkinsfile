@@ -44,7 +44,7 @@ pipeline {
 
         stage("Checkout from SCM") {
             steps {
-                git branch: 'main', credentialsId: 'github', url: 'https://github.com/mira33ch/MyPortfolio'
+                git branch: 'main', credentialsId: 'github', url: 'https://github.com/MariemSaiidii/MyPortfolio.git'
             }
         }
 
@@ -58,7 +58,7 @@ pipeline {
                     }
 
                     // Build Spring Boot backend
-                    dir('demo1') {
+                    dir('portfolio-backend') {
                         sh 'mvn clean package -DskipTests'
                     }
                 }
@@ -75,7 +75,7 @@ pipeline {
 
         stage('SonarQube Analysis Backend') {
             steps {
-                dir('demo1') {
+                dir('portfolio-backend') {
                     script {
                         withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
                             sh 'mvn sonar:sonar'

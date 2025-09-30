@@ -1,0 +1,17 @@
+<div class="container mt-5">
+  <h2 class="mb-4 text-center">Courses</h2>
+  <div class="row">
+    <div *ngFor="let course of courses" class="col-md-6 mb-4">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <h5 class="card-title">{{ course.title }}</h5>
+          <p class="card-text">{{ course.description }}</p>
+          <a *ngIf="course.url" [href]="course.url" target="_blank" class="btn btn-outline-primary btn-sm">
+            View Course ({{ course.platform }})
+          </a>
+          <span *ngIf="!course.url" class="badge bg-secondary">{{ course.platform }}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

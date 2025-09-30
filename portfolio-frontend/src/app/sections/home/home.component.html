@@ -1,0 +1,22 @@
+<div class="container mt-5 d-flex justify-content-center">
+  <div class="card shadow p-4 text-center" style="max-width: 600px; width: 100%;">
+    <div class="card-body">
+      <img *ngIf="contact" [src]="contact.profileImageUrl" class="rounded-circle mb-3" width="150" alt="Profile Image" />
+
+      <h2 class="card-title">{{ contact?.name }}</h2>
+      <p class="card-text lead">{{ contact?.description }}</p>
+
+      <p class="mb-1"><strong>Email:</strong> {{ contact?.email }}</p>
+      <p class="mb-3"><strong>Phone:</strong> {{ contact?.phone }}</p>
+
+      <div>
+        <a [href]="contact?.linkedinLink" target="_blank" class="btn btn-outline-primary me-2">
+          <i class="bi bi-linkedin"></i> LinkedInLink
+        </a>
+        <a [href]="contact?.gitLink" target="_blank" class="btn btn-outline-dark">
+          <i class="bi bi-github"></i> GitHubLink
+        </a>
+      </div>
+    </div>
+  </div>
+</div>

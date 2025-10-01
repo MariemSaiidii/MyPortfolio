@@ -64,7 +64,9 @@ pipeline {
                 }
             }
         }
+    
 
+    /*
         stage('SonarQube Analysis Backend') {
             steps {
                 dir('portfolio-backend') {
@@ -97,6 +99,7 @@ pipeline {
                 }
             }
         }
+        */
 
         stage('Build & Push Docker Images') {
             steps {

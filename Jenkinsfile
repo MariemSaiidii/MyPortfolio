@@ -69,7 +69,7 @@ pipeline {
             steps {
                 dir('portfolio-backend') {
                     script {
-                        withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
+                        withSonarQubeEnv(credentialsId: 'SonarQube') {
                             bat 'mvn sonar:sonar'
                         }
                     }
@@ -81,7 +81,7 @@ pipeline {
             steps {
                 dir('portfolio-frontend') {
                     script {
-                        withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
+                        withSonarQubeEnv(credentialsId: 'SonarQube') {
                             bat 'npm install sonar-scanner'
                             bat 'npx sonar-scanner -Dsonar.projectKey=frontend-project-key -Dsonar.sources=src'
                         }

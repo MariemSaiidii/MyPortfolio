@@ -24,7 +24,7 @@ pipeline {
                 bat 'docker rm -f mysql-test || exit /b 0'
                 bat 'docker run --name mysql-test -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=%MYSQL_DB% -p %MYSQL_PORT%:3306 -d mysql:8.0 --default-authentication-plugin=mysql_native_password'
                 bat 'echo Waiting for MySQL to start...'
-                bat 'timeout /t 20' // Separated into its own bat step to avoid redirection issues
+                powershell 'Start-Sleep -Seconds 20' // Replaced timeout with PowerShell Start-Sleep
             }
         }
 

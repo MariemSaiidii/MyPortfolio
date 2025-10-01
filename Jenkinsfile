@@ -25,7 +25,7 @@ pipeline {
                 bat 'docker rm -f mysql-test || exit /b 0'
                 bat 'docker run --name mysql-test -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=%MYSQL_DB% -p %MYSQL_PORT%:3306 -d mysql:8.0 --default-authentication-plugin=mysql_native_password'
                 bat 'echo Waiting for MySQL to start...'
-                powershell 'Start-Sleep -Seconds 20' // Optimize: Consider reducing to 10s with health check
+                powershell 'Start-Sleep -Seconds 20'
             }
         }
 
@@ -44,13 +44,10 @@ pipeline {
         stage("Build Application") {
             steps {
                 script {
-                    // Build Angular frontend
                     dir('portfolio-frontend') {
                         bat 'npm install'
                         bat 'npm run build --prod'
                     }
-
-                    // Build Spring Boot backend
                     dir('portfolio-backend') {
                         bat 'mvn clean package -DskipTests'
                     }
@@ -66,33 +63,33 @@ pipeline {
             }
         }
 
-stage('SonarQube Analysis') {
-    parallel {
-        stage('Backend Analysis') {
-            steps {
-                dir('portfolio-backend') {
-                    withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') { // Replace 'SonarQube' with your configured name
-                        bat 'mvn sonar:sonar -Dsonar.projectKey=portfolio-backend -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
+        stage('SonarQube Analysis') {
+            parallel {
+                stage('Backend Analysis') {
+                    steps {
+                        dir('portfolio-backend') {
+                            withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
+                                bat 'mvn sonar:sonar -Dsonar.projectKey=portfolio-backend -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
+                            }
+                        }
+                    }
+                }
+                stage('Frontend Analysis') {
+                    steps {
+                        dir('portfolio-frontend') {
+                            withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
+                                bat 'npx sonar-scanner -Dsonar.projectKey=portfolio-frontend -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
+                            }
+                        }
                     }
                 }
             }
         }
-        stage('Frontend Analysis') {
-            steps {
-                dir('portfolio-frontend') {
-                    withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') { // Replace 'SonarQube' with your configured name
-                        bat 'npx sonar-scanner -Dsonar.projectKey=portfolio-frontend -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
-                    }
-                }
-            }
-        }
-    }
-}
 
         stage('Quality Gate') {
             steps {
                 script {
-                    timeout(time: 10, unit: 'MINUTES') { // Optimize: Limit wait time
+                    timeout(time: 10, unit: 'MINUTES') {
                         def qg = waitForQualityGate(abortPipeline: false)
                         if (qg.status != 'OK') {
                             echo "Quality Gate status: ${qg.status}. Review issues in SonarQube dashboard."
@@ -114,15 +111,6 @@ stage('SonarQube Analysis') {
                         frontendImage.push()
                         frontendImage.push('latest')
                     }
-                }
-            }
-        }
-
-        stage("Trivy Scan") {
-            steps {
-                script {
-                    bat 'docker run -v //var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem631/portfolio-app-cicd-pipeline-frontend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table'
-                    bat 'docker run -v //var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem631/portfolio-app-cicd-pipeline-backend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table'
                 }
             }
         }

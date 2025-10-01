@@ -1,4 +1,4 @@
-pipeline { 
+pipeline {
     agent any
     
     tools {
@@ -12,7 +12,7 @@ pipeline {
         MYSQL_PORT = '3306'
         APP_NAME = "portfolio-app-cicd-pipeline"
         RELEASE = "1.0.0"
-        DOCKER_USER = "mariem360"
+        DOCKER_USER = "mariem631" // Updated to your Docker Hub username
         DOCKER_PASS = 'dockerhub'
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
@@ -67,7 +67,7 @@ pipeline {
 
         stage("Test Application") {
             steps {
-                dir('demo1') {
+                dir('portfolio-backend') { // Changed from demo1 to portfolio-backend
                     sh 'mvn test'
                 }
             }
@@ -110,7 +110,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', DOCKER_PASS) {
-                        def backendImage = docker.build("${IMAGE_NAME}-backend:${IMAGE_TAG}", 'demo1/')
+                        def backendImage = docker.build("${IMAGE_NAME}-backend:${IMAGE_TAG}", 'portfolio-backend/') // Changed from demo1
                         backendImage.push()
                         backendImage.push('latest')
 
@@ -125,8 +125,8 @@ pipeline {
         stage("Trivy Scan") {
             steps {
                 script {
-                    sh 'docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem360/portfolio-app-cicd-pipeline-frontend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table'
-                    sh 'docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem360/portfolio-app-cicd-pipeline-backend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table'
+                    sh 'docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem631/portfolio-app-cicd-pipeline-frontend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table' // Updated to mariem631
+                    sh 'docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem631/portfolio-app-cicd-pipeline-backend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table' // Updated to mariem631
                 }
             }
         }
@@ -150,23 +150,21 @@ pipeline {
                 }
             }
         }
-    }
-    /*
-    stage('Trigger CD Pipeline') {
+
+        /* 
+        stage('Trigger CD Pipeline') {
             steps {
                 script {
                     sh "curl -v -k --user clouduser:${JENKINS_API_TOKEN} -X POST -H 'cache-control: no-cache' -H 'content-type: application/x-www-form-urlencoded' --data 'IMAGE_TAG=${IMAGE_TAG}' '9.163.88.247:8080/job/gitops-cdpipeline/buildWithParameters?token=argocd-token'"
                 }
             }
         }
+        */
     }
 
-*/
-     
     post {
         always {
             echo 'Pipeline finished'
         }
     }
 }
-

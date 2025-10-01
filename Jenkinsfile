@@ -16,7 +16,7 @@ pipeline {
         DOCKER_PASS = 'dockerhub'
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
-        SONAR_HOST_URL = "http://your-sonarqube-server:9000" // Replace with your SonarQube URL
+        SONAR_HOST_URL = "http://your-sonarqube-server:9000" // Replace with your SonarQube url
     }
 
     stages {

@@ -16,6 +16,7 @@ pipeline {
         DOCKER_PASS = 'dockerhub'
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
+        SONAR_HOST_URL = "http://your-sonarqube-server:9000" // Replace with your SonarQube URL
     }
 
     stages {
@@ -24,7 +25,7 @@ pipeline {
                 bat 'docker rm -f mysql-test || exit /b 0'
                 bat 'docker run --name mysql-test -e MYSQL_ALLOW_EMPTY_PASSWORD=yes -e MYSQL_DATABASE=%MYSQL_DB% -p %MYSQL_PORT%:3306 -d mysql:8.0 --default-authentication-plugin=mysql_native_password'
                 bat 'echo Waiting for MySQL to start...'
-                powershell 'Start-Sleep -Seconds 20' // Replaced timeout with PowerShell Start-Sleep
+                powershell 'Start-Sleep -Seconds 20' // Optimize: Consider reducing to 10s with health check
             }
         }
 
@@ -64,28 +65,24 @@ pipeline {
                 }
             }
         }
-    
 
-    /*
-        stage('SonarQube Analysis Backend') {
-            steps {
-                dir('portfolio-backend') {
-                    script {
-                        withSonarQubeEnv(credentialsId: 'SonarQube') {
-                            bat 'mvn sonar:sonar'
+        stage('SonarQube Analysis') {
+            parallel {
+                stage('Backend Analysis') {
+                    steps {
+                        dir('portfolio-backend') {
+                            withSonarQubeEnv(credentialsId: 'SonarQube') {
+                                bat 'mvn sonar:sonar -Dsonar.projectKey=backend-project-key -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
+                            }
                         }
                     }
                 }
-            }
-        }
-
-        stage('SonarQube Frontend Analysis') {
-            steps {
-                dir('portfolio-frontend') {
-                    script {
-                        withSonarQubeEnv(credentialsId: 'SonarQube') {
-                            bat 'npm install sonar-scanner'
-                            bat 'npx sonar-scanner -Dsonar.projectKey=frontend-project-key -Dsonar.sources=src'
+                stage('Frontend Analysis') {
+                    steps {
+                        dir('portfolio-frontend') {
+                            withSonarQubeEnv(credentialsId: 'SonarQube') {
+                                bat 'npx sonar-scanner -Dsonar.projectKey=frontend-project-key -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
+                            }
                         }
                     }
                 }
@@ -95,11 +92,15 @@ pipeline {
         stage('Quality Gate') {
             steps {
                 script {
-                    waitForQualityGate abortPipeline: false, credentialsId: 'jenkins-sonarqube-token'
+                    timeout(time: 5, unit: 'MINUTES') { // Optimize: Limit wait time
+                        def qg = waitForQualityGate(abortPipeline: false)
+                        if (qg.status != 'OK') {
+                            echo "Quality Gate status: ${qg.status}. Review issues in SonarQube dashboard."
+                        }
+                    }
                 }
             }
         }
-        */
 
         stage('Build & Push Docker Images') {
             steps {
@@ -143,16 +144,6 @@ pipeline {
                 }
             }
         }
-
-        /* 
-        stage('Trigger CD Pipeline') {
-            steps {
-                script {
-                    bat "curl -v -k --user clouduser:${JENKINS_API_TOKEN} -X POST -H \"cache-control: no-cache\" -H \"content-type: application/x-www-form-urlencoded\" --data \"IMAGE_TAG=${IMAGE_TAG}\" \"9.163.88.247:8080/job/gitops-cdpipeline/buildWithParameters?token=argocd-token\""
-                }
-            }
-        }
-        */
     }
 
     post {

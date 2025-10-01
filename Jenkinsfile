@@ -151,6 +151,7 @@ pipeline {
             }
         }
     }
+    /*
     stage('Trigger CD Pipeline') {
             steps {
                 script {
@@ -160,9 +161,12 @@ pipeline {
         }
     }
 
+*/
+     
     post {
         always {
             echo 'Pipeline finished'
         }
     }
 }
+

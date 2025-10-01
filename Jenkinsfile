@@ -92,7 +92,7 @@ stage('SonarQube Analysis') {
         stage('Quality Gate') {
             steps {
                 script {
-                    timeout(time: 5, unit: 'MINUTES') { // Optimize: Limit wait time
+                    timeout(time: 10, unit: 'MINUTES') { // Optimize: Limit wait time
                         def qg = waitForQualityGate(abortPipeline: false)
                         if (qg.status != 'OK') {
                             echo "Quality Gate status: ${qg.status}. Review issues in SonarQube dashboard."

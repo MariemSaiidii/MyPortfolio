@@ -66,28 +66,28 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            parallel {
-                stage('Backend Analysis') {
-                    steps {
-                        dir('portfolio-backend') {
-                            withSonarQubeEnv(credentialsId: 'SonarQube') {
-                                bat 'mvn sonar:sonar -Dsonar.projectKey=backend-project-key -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
-                            }
-                        }
-                    }
-                }
-                stage('Frontend Analysis') {
-                    steps {
-                        dir('portfolio-frontend') {
-                            withSonarQubeEnv(credentialsId: 'SonarQube') {
-                                bat 'npx sonar-scanner -Dsonar.projectKey=frontend-project-key -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
-                            }
-                        }
+stage('SonarQube Analysis') {
+    parallel {
+        stage('Backend Analysis') {
+            steps {
+                dir('portfolio-backend') {
+                    withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') { // Replace 'SonarQube' with your configured name
+                        bat 'mvn sonar:sonar -Dsonar.projectKey=portfolio-backend -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
                     }
                 }
             }
         }
+        stage('Frontend Analysis') {
+            steps {
+                dir('portfolio-frontend') {
+                    withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') { // Replace 'SonarQube' with your configured name
+                        bat 'npx sonar-scanner -Dsonar.projectKey=portfolio-frontend -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
+                    }
+                }
+            }
+        }
+    }
+}
 
         stage('Quality Gate') {
             steps {

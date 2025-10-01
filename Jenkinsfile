@@ -63,29 +63,28 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis') {
-            parallel {
-                stage('Backend Analysis') {
-                    steps {
-                        dir('portfolio-backend') {
-                            withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
-                                bat 'mvn sonar:sonar -Dsonar.projectKey=portfolio-backend portfolio-backend -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
-                            }
-                        }
-                    }
-                }
-                stage('Frontend Analysis') {
-                    steps {
-                        dir('portfolio-frontend') {
-                            withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
-                                bat 'npx sonar-scanner -Dsonar.projectKey=portfolio-frontend portfolio-backend -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
-                            }
-                        }
+stage('SonarQube Analysis') {
+    parallel {
+        stage('Backend Analysis') {
+            steps {
+                dir('portfolio-backend') {
+                    withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
+                        bat 'mvn sonar:sonar -Dsonar.projectKey=portfolio-backend -Dsonar.branch.name=main -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
                     }
                 }
             }
         }
-
+        stage('Frontend Analysis') {
+            steps {
+                dir('portfolio-frontend') {
+                    withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
+                        bat 'npx sonar-scanner -Dsonar.projectKey=portfolio-frontend -Dsonar.branch.name=main -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
+                    }
+                }
+            }
+        }
+    }
+}
         stage('Quality Gate') {
             steps {
                 script {

@@ -12,7 +12,7 @@ pipeline {
         MYSQL_PORT = '3306'
         APP_NAME = "portfolio-app-cicd-pipeline"
         RELEASE = "1.0.0"
-        DOCKER_USER = "mariem631" // Updated to your Docker Hub username
+        DOCKER_USER = "mariem631"
         DOCKER_PASS = 'dockerhub'
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
@@ -21,18 +21,17 @@ pipeline {
     stages {
         stage('Start MySQL (no password)') {
             steps {
-                sh 'docker rm -f mysql-test || true'
-                sh '''
-                    docker run --name mysql-test \
-                        -e MYSQL_ALLOW_EMPTY_PASSWORD=yes \
-                        -e MYSQL_DATABASE=$MYSQL_DB \
-                        -p $MYSQL_PORT:3306 \
-                        -d mysql:8.0 \
+                bat 'docker rm -f mysql-test || exit /b 0' // Changed to bat, using exit /b 0 for || true equivalent
+                bat '''
+                    docker run --name mysql-test ^
+                        -e MYSQL_ALLOW_EMPTY_PASSWORD=yes ^
+                        -e MYSQL_DATABASE=%MYSQL_DB% ^
+                        -p %MYSQL_PORT%:3306 ^
+                        -d mysql:8.0 ^
                         --default-authentication-plugin=mysql_native_password
-
-                    echo "Waiting for MySQL to start..."
-                    sleep 20
-                '''
+                    echo Waiting for MySQL to start...
+                    timeout /t 20
+                ''' // Changed to bat, using ^ for line continuation and %VAR% for environment variables
             }
         }
 
@@ -53,13 +52,13 @@ pipeline {
                 script {
                     // Build Angular frontend
                     dir('portfolio-frontend') {
-                        sh 'npm install'
-                        sh 'npm run build --prod'
+                        bat 'npm install'
+                        bat 'npm run build --prod'
                     }
 
                     // Build Spring Boot backend
                     dir('portfolio-backend') {
-                        sh 'mvn clean package -DskipTests'
+                        bat 'mvn clean package -DskipTests'
                     }
                 }
             }
@@ -67,8 +66,8 @@ pipeline {
 
         stage("Test Application") {
             steps {
-                dir('portfolio-backend') { // Changed from demo1 to portfolio-backend
-                    sh 'mvn test'
+                dir('portfolio-backend') {
+                    bat 'mvn test'
                 }
             }
         }
@@ -78,7 +77,7 @@ pipeline {
                 dir('portfolio-backend') {
                     script {
                         withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
-                            sh 'mvn sonar:sonar'
+                            bat 'mvn sonar:sonar'
                         }
                     }
                 }
@@ -90,8 +89,8 @@ pipeline {
                 dir('portfolio-frontend') {
                     script {
                         withSonarQubeEnv(credentialsId: 'jenkins-sonarqube-token') {
-                            sh 'npm install sonar-scanner'
-                            sh 'npx sonar-scanner -Dsonar.projectKey=frontend-project-key -Dsonar.sources=src'
+                            bat 'npm install sonar-scanner'
+                            bat 'npx sonar-scanner -Dsonar.projectKey=frontend-project-key -Dsonar.sources=src'
                         }
                     }
                 }
@@ -110,7 +109,7 @@ pipeline {
             steps {
                 script {
                     docker.withRegistry('https://index.docker.io/v1/', DOCKER_PASS) {
-                        def backendImage = docker.build("${IMAGE_NAME}-backend:${IMAGE_TAG}", 'portfolio-backend/') // Changed from demo1
+                        def backendImage = docker.build("${IMAGE_NAME}-backend:${IMAGE_TAG}", 'portfolio-backend/')
                         backendImage.push()
                         backendImage.push('latest')
 
@@ -125,28 +124,26 @@ pipeline {
         stage("Trivy Scan") {
             steps {
                 script {
-                    sh 'docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem631/portfolio-app-cicd-pipeline-frontend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table' // Updated to mariem631
-                    sh 'docker run -v /var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem631/portfolio-app-cicd-pipeline-backend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table' // Updated to mariem631
+                    bat 'docker run -v //var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem631/portfolio-app-cicd-pipeline-frontend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table'
+                    bat 'docker run -v //var/run/docker.sock:/var/run/docker.sock aquasec/trivy image mariem631/portfolio-app-cicd-pipeline-backend:latest --no-progress --scanners vuln --exit-code 0 --severity HIGH,CRITICAL --format table'
                 }
             }
         }
 
         stage('Stop MySQL') {
             steps {
-                sh '''
-                    docker stop mysql-test || true
-                    docker rm mysql-test || true
-                '''
+                bat 'docker stop mysql-test || exit /b 0'
+                bat 'docker rm mysql-test || exit /b 0'
             }
         }
 
         stage('Cleanup Artifacts') {
             steps {
                 script {
-                    sh "docker rmi ${IMAGE_NAME}-backend:${IMAGE_TAG} || true"
-                    sh "docker rmi ${IMAGE_NAME}-backend:latest || true"
-                    sh "docker rmi ${IMAGE_NAME}-frontend:${IMAGE_TAG} || true"
-                    sh "docker rmi ${IMAGE_NAME}-frontend:latest || true"
+                    bat "docker rmi ${IMAGE_NAME}-backend:${IMAGE_TAG} || exit /b 0"
+                    bat "docker rmi ${IMAGE_NAME}-backend:latest || exit /b 0"
+                    bat "docker rmi ${IMAGE_NAME}-frontend:${IMAGE_TAG} || exit /b 0"
+                    bat "docker rmi ${IMAGE_NAME}-frontend:latest || exit /b 0"
                 }
             }
         }
@@ -155,7 +152,7 @@ pipeline {
         stage('Trigger CD Pipeline') {
             steps {
                 script {
-                    sh "curl -v -k --user clouduser:${JENKINS_API_TOKEN} -X POST -H 'cache-control: no-cache' -H 'content-type: application/x-www-form-urlencoded' --data 'IMAGE_TAG=${IMAGE_TAG}' '9.163.88.247:8080/job/gitops-cdpipeline/buildWithParameters?token=argocd-token'"
+                    bat "curl -v -k --user clouduser:${JENKINS_API_TOKEN} -X POST -H \"cache-control: no-cache\" -H \"content-type: application/x-www-form-urlencoded\" --data \"IMAGE_TAG=${IMAGE_TAG}\" \"9.163.88.247:8080/job/gitops-cdpipeline/buildWithParameters?token=argocd-token\""
                 }
             }
         }

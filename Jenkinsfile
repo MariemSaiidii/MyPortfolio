@@ -69,7 +69,7 @@ pipeline {
                     steps {
                         dir('portfolio-backend') {
                             withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
-                                bat 'mvn sonar:sonar -Dsonar.projectKey=portfolio-backend -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
+                                bat 'mvn sonar:sonar -Dsonar.projectKey=portfolio-backend portfolio-backend -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
                             }
                         }
                     }
@@ -78,7 +78,7 @@ pipeline {
                     steps {
                         dir('portfolio-frontend') {
                             withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
-                                bat 'npx sonar-scanner -Dsonar.projectKey=portfolio-frontend -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
+                                bat 'npx sonar-scanner -Dsonar.projectKey=portfolio-frontend portfolio-backend -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
                             }
                         }
                     }

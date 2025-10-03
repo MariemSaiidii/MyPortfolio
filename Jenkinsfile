@@ -13,10 +13,10 @@ pipeline {
         APP_NAME = "portfolio-app-cicd-pipeline"
         RELEASE = "1.0.0"
         DOCKER_USER = "mariem631"
-        DOCKER_PASS = 'dockerhub'
+        DOCKER_PASS = 'dockerhub' // This should be a credential ID, not a literal; see notes below
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
         IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
-        SONAR_HOST_URL = "http://your-sonarqube-server:9000" // Replace with your SonarQube url
+        SONAR_HOST_URL = "http://localhost:9000" // Replaced placeholder with assumed local URL
     }
 
     stages {
@@ -63,32 +63,45 @@ pipeline {
             }
         }
 
-stage('SonarQube Analysis') {
-    parallel {
-        stage('Backend Analysis') {
-            steps {
-                dir('portfolio-backend') {
-                    withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
-                        bat 'mvn sonar:sonar -Dsonar.projectKey=portfolio-backend -Dsonar.java.binaries=target/classes -Dsonar.exclusions=**/test/**'
+        stage('SonarQube Analysis') {
+            parallel {
+                stage('Backend Analysis') {
+                    steps {
+                        dir('portfolio-backend') {
+                            withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
+                                bat '''
+                                    mvn sonar:sonar ^
+                                    -Dsonar.projectKey=portfolio-backend ^
+                                    -Dsonar.sources=src/main/java ^
+                                    -Dsonar.exclusions=**/test/**,**/target/**,**/generated/** ^
+                                    -Dsonar.java.binaries=target/classes
+                                '''
+                            }
+                        }
+                    }
+                }
+                stage('Frontend Analysis') {
+                    steps {
+                        dir('portfolio-frontend') {
+                            withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
+                                bat '''
+                                    npx sonar-scanner ^
+                                    -Dsonar.projectKey=portfolio-frontend ^
+                                    -Dsonar.sources=src ^
+                                    -Dsonar.exclusions=node_modules/**,dist/**,**/test/**,**/generated/** ^
+                                    -Dsonar.nodejs.executable.path=node
+                                '''
+                            }
+                        }
                     }
                 }
             }
         }
-        stage('Frontend Analysis') {
-            steps {
-                dir('portfolio-frontend') {
-                    withSonarQubeEnv(credentialsId: 'SonarQube', installationName: 'SonarQube') {
-                        bat 'npx sonar-scanner -Dsonar.projectKey=portfolio-frontend -Dsonar.sources=src -Dsonar.exclusions=node_modules/**,dist/**'
-                    }
-                }
-            }
-        }
-    }
-}
+
         stage('Quality Gate') {
             steps {
                 script {
-                    timeout(time: 10, unit: 'MINUTES') {
+                    timeout(time: 10, unit: 'MINUTES') { // Keep at 10 min, aim to stay under
                         def qg = waitForQualityGate(abortPipeline: false)
                         if (qg.status != 'OK') {
                             echo "Quality Gate status: ${qg.status}. Review issues in SonarQube dashboard."
@@ -100,15 +113,17 @@ stage('SonarQube Analysis') {
 
         stage('Build & Push Docker Images') {
             steps {
-                script {
-                    docker.withRegistry('https://index.docker.io/v1/', DOCKER_PASS) {
-                        def backendImage = docker.build("${IMAGE_NAME}-backend:${IMAGE_TAG}", 'portfolio-backend/')
-                        backendImage.push()
-                        backendImage.push('latest')
+                withCredentials([usernamePassword(credentialsId: 'dockerhub', usernameVariable: 'DOCKER_USERNAME', passwordVariable: 'DOCKER_PASSWORD')]) {
+                    script {
+                        docker.withRegistry('https://index.docker.io/v1/', 'dockerhub') {
+                            def backendImage = docker.build("${IMAGE_NAME}-backend:${IMAGE_TAG}", 'portfolio-backend/')
+                            backendImage.push()
+                            backendImage.push('latest')
 
-                        def frontendImage = docker.build("${IMAGE_NAME}-frontend:${IMAGE_TAG}", 'portfolio-frontend/')
-                        frontendImage.push()
-                        frontendImage.push('latest')
+                            def frontendImage = docker.build("${IMAGE_NAME}-frontend:${IMAGE_TAG}", 'portfolio-frontend/')
+                            frontendImage.push()
+                            frontendImage.push('latest')
+                        }
                     }
                 }
             }

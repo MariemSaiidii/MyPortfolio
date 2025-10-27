@@ -15,7 +15,7 @@ pipeline {
         DOCKER_USER = "mariem631"
         DOCKER_PASS = 'dockerhub' // This should be a credential ID, not a literal; see notes below
         IMAGE_NAME = "${DOCKER_USER}/${APP_NAME}"
-        IMAGE_TAG = "${RELEASE}-${BUILD_NUMBER}"
+        IMAGE_TAG = "1.0.${BUILD_NUMBER}"
         SONAR_HOST_URL = "http://localhost:9000" // Replaced placeholder with assumed local URL
     }
 
